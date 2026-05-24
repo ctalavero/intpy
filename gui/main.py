@@ -1,8 +1,14 @@
 import sys
+from pathlib import Path
+
+# Add project root directory to sys.path to allow launching directly as a script file
+sys.path.append(str(Path(__file__).resolve().parents[2]))
+
 import argparse
 from PySide6.QtWidgets import QApplication
 from intpy.gui.main_window import MainWindow
 from intpy.gui.style import QSS_STYLESHEET
+
 
 
 def main() -> None:
