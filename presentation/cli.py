@@ -5,6 +5,7 @@ from intpy.domain.exceptions import TaskError, TaskValidationError
 from intpy.domain.models import TaskPriority, TaskStatus
 from intpy.presentation.formatter import format_single_task, format_task_table
 from intpy.repository.json_repo import JsonTaskRepository
+from intpy.service.printer_service import PrinterService
 from intpy.service.task_service import TaskService
 
 
@@ -98,6 +99,15 @@ def create_parser() -> argparse.ArgumentParser:
     delete_parser = subparsers.add_parser("delete", help="Delete a task from the hub.")
     delete_parser.add_argument("id", type=int, help="ID of the task to delete.")
 
+    # PRINT command (PDF generation)
+    print_parser = subparsers.add_parser("print", help="Generate a PDF report of all tasks.")
+    print_parser.add_argument(
+        "-o", "--output",
+        type=str,
+        default="tasks_report.pdf",
+        help="Output PDF file path."
+    )
+
     return parser
 
 
@@ -164,6 +174,11 @@ def run_cli(args_list: list[str] | None = None) -> int:
             case "delete":
                 service.delete_task(parsed_args.id)
                 print(f"\033[92m✔ Task #{parsed_args.id} deleted successfully.\033[0m")
+
+            case "print":
+                printer = PrinterService(service)
+                path = printer.generate_pdf(parsed_args.output)
+                print(f"\033[92m✔ PDF report saved to: {path}\033[0m")
 
             case _:
                 parser.print_help()

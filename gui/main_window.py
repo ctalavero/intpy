@@ -1,6 +1,7 @@
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QFont, QIcon
 from PySide6.QtWidgets import (
+    QFileDialog,
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -13,9 +14,11 @@ from PySide6.QtWidgets import (
 )
 from intpy.domain.models import TaskStatus
 from intpy.repository.json_repo import JsonTaskRepository
+from intpy.service.printer_service import PrinterService
 from intpy.service.task_service import TaskService
 from intpy.gui.column import KanbanColumn
 from intpy.gui.dialogs import TaskDialog
+
 
 
 class MainWindow(QMainWindow):
@@ -66,6 +69,12 @@ class MainWindow(QMainWindow):
         global_add_btn.setObjectName("addBtn")
         global_add_btn.clicked.connect(lambda: self.handle_add_task(TaskStatus.TODO.value))
         toolbar_layout.addWidget(global_add_btn)
+
+        # Export PDF Button
+        pdf_btn = QPushButton("📄 Export PDF", self)
+        pdf_btn.setObjectName("addBtn")
+        pdf_btn.clicked.connect(self.handle_export_pdf)
+        toolbar_layout.addWidget(pdf_btn)
 
         # Clear All Button
         clear_btn = QPushButton("🗑️ Clear All", self)
@@ -216,3 +225,24 @@ class MainWindow(QMainWindow):
                 self.load_tasks()
             except Exception as e:
                 QMessageBox.critical(self, "Error", f"Failed to clear board: {e}")
+
+    def handle_export_pdf(self) -> None:
+        """Generates a PDF report and saves it via a file dialog."""
+        file_path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save PDF Report",
+            "tasks_report.pdf",
+            "PDF Files (*.pdf)",
+        )
+        if not file_path:
+            return  # User cancelled
+
+        try:
+            printer = PrinterService(self.service)
+            saved_path = printer.generate_pdf(file_path)
+            QMessageBox.information(
+                self, "PDF Exported",
+                f"Report saved successfully!\n\n{saved_path}"
+            )
+        except Exception as e:
+            QMessageBox.critical(self, "Export Error", f"Failed to generate PDF:\n{e}")
