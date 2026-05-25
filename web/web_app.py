@@ -150,15 +150,49 @@ if st.session_state.get("pdf_ready") and all_tasks:
     st.markdown("---")
     st.subheader("📱 QR Code")
 
-    qr_text = f"TaskHub Report | {len(all_tasks)} tasks | {datetime.now().strftime('%Y-%m-%d %H:%M')}"
-    qr = qrcode.QRCode(version=1, box_size=8, border=2)
+    todo_tasks = [t for t in all_tasks if t.status == TaskStatus.TODO]
+    progress_tasks = [t for t in all_tasks if t.status == TaskStatus.IN_PROGRESS]
+    done_tasks = [t for t in all_tasks if t.status == TaskStatus.DONE]
+
+    qr_lines = [
+        "--- TASKHUB DIGITAL REPORT ---",
+        "Online Dashboard: https://github.com/ctalavero/intpy",
+        f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+        f"Stats: Total: {len(all_tasks)} | TODO: {len(todo_tasks)} | In Progress: {len(progress_tasks)} | Done: {len(done_tasks)}",
+        ""
+    ]
+
+    if todo_tasks:
+        qr_lines.append("[TODO]")
+        for t in todo_tasks[:5]:
+            qr_lines.append(f" - #{t.id}: {t.title}")
+        if len(todo_tasks) > 5:
+            qr_lines.append(f" ... and {len(todo_tasks) - 5} more")
+
+    if progress_tasks:
+        qr_lines.append("[IN PROGRESS]")
+        for t in progress_tasks[:5]:
+            qr_lines.append(f" - #{t.id}: {t.title}")
+        if len(progress_tasks) > 5:
+            qr_lines.append(f" ... and {len(progress_tasks) - 5} more")
+
+    if done_tasks:
+        qr_lines.append("[DONE]")
+        for t in done_tasks[:5]:
+            qr_lines.append(f" - #{t.id}: {t.title}")
+        if len(done_tasks) > 5:
+            qr_lines.append(f" ... and {len(done_tasks) - 5} more")
+
+    qr_text = "\n".join(qr_lines)
+
+    qr = qrcode.QRCode(version=None, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=8, border=2)
     qr.add_data(qr_text)
     qr.make(fit=True)
     img = qr.make_image(fill_color="black", back_color="white")
 
     buf = io.BytesIO()
     img.save(buf, format="PNG")
-    st.image(buf.getvalue(), caption=qr_text, width=250)
+    st.image(buf.getvalue(), caption="Scan this code to open the Online Dashboard and view all tasks on your smartphone!", width=250)
 
 # ---------------------------------------------------------------------------
 # Task actions (edit / delete)

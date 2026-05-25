@@ -201,13 +201,45 @@ class PrinterService:
             pdf.ln()
 
     def _draw_qr_code(self, pdf: _ReportPDF, tasks: list[Task]) -> None:
-        # Generate QR content
-        qr_text = (
-            f"TaskHub Report | {len(tasks)} tasks | "
-            f"{datetime.now().strftime('%Y-%m-%d %H:%M')}"
-        )
+        # Group tasks by status for detailed QR content
+        todo_tasks = [t for t in tasks if t.status == TaskStatus.TODO]
+        progress_tasks = [t for t in tasks if t.status == TaskStatus.IN_PROGRESS]
+        done_tasks = [t for t in tasks if t.status == TaskStatus.DONE]
 
-        qr = qrcode.QRCode(version=1, box_size=6, border=2)
+        # Construct comprehensive QR text
+        qr_lines = [
+            "--- TASKHUB DIGITAL REPORT ---",
+            "Online Dashboard: https://github.com/ctalavero/intpy",
+            f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}",
+            f"Stats: Total: {len(tasks)} | TODO: {len(todo_tasks)} | In Progress: {len(progress_tasks)} | Done: {len(done_tasks)}",
+            ""
+        ]
+
+        if todo_tasks:
+            qr_lines.append("[TODO]")
+            for t in todo_tasks[:5]:  # Limit to top 5 to prevent huge QR codes
+                qr_lines.append(f" - #{t.id}: {t.title}")
+            if len(todo_tasks) > 5:
+                qr_lines.append(f" ... and {len(todo_tasks) - 5} more")
+
+        if progress_tasks:
+            qr_lines.append("[IN PROGRESS]")
+            for t in progress_tasks[:5]:
+                qr_lines.append(f" - #{t.id}: {t.title}")
+            if len(progress_tasks) > 5:
+                qr_lines.append(f" ... and {len(progress_tasks) - 5} more")
+
+        if done_tasks:
+            qr_lines.append("[DONE]")
+            for t in done_tasks[:5]:
+                qr_lines.append(f" - #{t.id}: {t.title}")
+            if len(done_tasks) > 5:
+                qr_lines.append(f" ... and {len(done_tasks) - 5} more")
+
+        qr_text = "\n".join(qr_lines)
+
+        # Set version=None so the qrcode library automatically fits the data density
+        qr = qrcode.QRCode(version=None, error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=4, border=2)
         qr.add_data(qr_text)
         qr.make(fit=True)
         img = qr.make_image(fill_color="black", back_color="white")
@@ -221,16 +253,17 @@ class PrinterService:
             # Center the QR on the page
             pdf.set_font("Helvetica", "B", 11)
             pdf.set_text_color(40, 40, 60)
-            pdf.cell(0, 10, "QR Code", align="C", new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 10, "QR Code (Scan for Full Task List & Dashboard)", align="C", new_x="LMARGIN", new_y="NEXT")
 
-            qr_size = 40
+            # Let's adjust size slightly to fit nicely
+            qr_size = 45
             x_center = (pdf.w - qr_size) / 2
             pdf.image(tmp_path, x=x_center, w=qr_size)
 
             pdf.ln(qr_size + 4)
             pdf.set_font("Helvetica", "I", 8)
             pdf.set_text_color(140, 140, 160)
-            pdf.cell(0, 6, qr_text, align="C", new_x="LMARGIN", new_y="NEXT")
+            pdf.cell(0, 6, "Online Dashboard: https://github.com/ctalavero/intpy", align="C", new_x="LMARGIN", new_y="NEXT")
         finally:
             Path(tmp_path).unlink(missing_ok=True)
 
